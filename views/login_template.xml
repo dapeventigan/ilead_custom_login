@@ -1,0 +1,53 @@
+<odoo>
+    <template id="custom_login_template" name="Custom Login">
+        <t t-call="web.layout">
+            <t t-set="title">Login</t>
+            <t t-call-assets="web.assets_frontend" t-js="false"/>
+            <t t-call-assets="web.assets_frontend" t-css="false"/>
+            <div class="login-bg">
+                <div class="login-card">
+                    <div class="login-header">
+                        <img src="/custom_login/static/src/img/icon.png" 
+                            class="login-logo" 
+                            alt="Dape Logo"/>
+                    </div>
+                    <form action="/custom/ilead_login" method="post" class="login-form">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <div class="input-group">
+                            <span class="input-icon">
+                                <i class="fa fa-user"></i>
+                            </span>
+                            <input type="text" name="login" placeholder="Enter username" 
+                                   required="required" class="login-input"/>
+                        </div>
+                        <div class="input-group">
+                            <span class="input-icon">
+                                <i class="fa fa-envelope"></i>
+                            </span>
+                            <input type="email" name="email" placeholder="Enter email" 
+                                   required="required" class="login-input"/>
+                        </div>
+                        <div class="input-group">
+                            <span class="input-icon">
+                                <i class="fa fa-lock"></i>
+                            </span>
+                            <input type="password" name="password" placeholder="Enter password" 
+                                   required="required" class="login-input"/>
+                        </div>
+                        <button type="submit" class="login-btn">Login</button>
+                        <t t-if="error">
+                            <div class="login-error">
+                                <t t-esc="error"/>
+                            </div>
+                        </t>
+                    </form>
+                    <div class="login-footer">
+                        <a href="/custom/signup">Don't have an account? Sign up</a>
+                    </div>
+                    <div class="login-footer">
+                    Dape - iLead I.T Solutions</div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>
