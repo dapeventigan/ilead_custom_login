@@ -1,56 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="custom_signup_template" name="Custom Signup">
-        <t t-call="web.layout">
-            <t t-set="title">Sign Up</t>
-            <t t-call-assets="web.assets_frontend"/>
-            
-            <div id="wrap" class="login-bg">
-                <div class="login-card">
-                    <div class="login-header">
-                        <h3 style="color: #8c5f80;">Create Account</h3>
+    <template id="custom_signup_template" name="Custom Sign Up">
+        <t t-set="title">Sign Up</t>
+        <t t-call-assets="web.assets_frontend" t-js="false"/>
+        <t t-call-assets="web.assets_frontend" t-css="false"/>
+        <div class="login-bg">
+            <div class="login-card">
+                <div class="login-header">
+                    <img src="/custom_login/static/src/img/icon.png" class="login-logo" alt="Logo"/>
+                </div>
+                <form action="/web/signup" method="post" class="login-form">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <input type="hidden" name="token" t-att-value="token"/>
+                    <input type="hidden" name="redirect" t-att-value="redirect"/>
+                    <div class="input-group">
+                        <span class="input-icon">
+                            <i class="fa fa-user"></i>
+                        </span>
+                        <input type="text" name="name" t-att-value="name" placeholder="Full Name" 
+                               required="required" class="login-input" autofocus="autofocus"/>
                     </div>
-                    <form action="/custom/do_signup" method="post" class="login-form">
-                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                        
-                        <div class="input-group">
-                            <span class="input-icon"><i class="fa fa-user"></i></span>
-                            <input type="text" name="name" placeholder="Full Name" required="required" class="login-input"/>
-                        </div>
-                        <div class="input-group">
-                            <span class="input-icon"><i class="fa fa-at"></i></span>
-                            <input type="text" name="login" placeholder="Username" required="required" class="login-input"/>
-                        </div>
-                        <div class="input-group">
-                            <span class="input-icon"><i class="fa fa-envelope"></i></span>
-                            <input type="email" name="email" placeholder="Email" required="required" class="login-input"/>
-                        </div>
-                        <div class="input-group">
-                            <span class="input-icon"><i class="fa fa-phone"></i></span>
-                            <input type="tel" name="phone" placeholder="Phone Number" class="login-input"/>
-                        </div>
-                        <div class="input-group">
-                            <span class="input-icon"><i class="fa fa-lock"></i></span>
-                            <input type="password" name="password" placeholder="Password" required="required" class="login-input"/>
-                        </div>
-                        <div class="input-group">
-                            <span class="input-icon"><i class="fa fa-check-circle"></i></span>
-                            <input type="password" name="confirm_password" placeholder="Confirm Password" required="required" class="login-input"/>
-                        </div>
-
-                        <button type="submit" class="login-btn">Register</button>
-                        
-                        <t t-if="error">
-                            <div class="login-error">
-                                <t t-esc="error"/>
-                            </div>
-                        </t>
-                    </form>
-                    <div class="login-footer">
-                        <a href="/web/login" style="color: #8c5f80; text-decoration: none;">Already have an account? Login</a>
+                    <div class="input-group">
+                        <span class="input-icon">
+                            <i class="fa fa-envelope"></i>
+                        </span>
+                        <input type="text" name="login" t-att-value="login" placeholder="Username" 
+                               required="required" class="login-input"/>
                     </div>
+                    <div class="input-group">
+                        <span class="input-icon">
+                            <i class="fa fa-envelope"></i>
+                        </span>
+                        <input type="email" name="email" t-att-value="email" placeholder="Email Address" required="required" class="login-input"/>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-icon">
+                            <i class="fa fa-lock"></i>
+                        </span>
+                        <input type="password" name="password" placeholder="Password" 
+                               required="required" class="login-input"/>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-icon">
+                            <i class="fa fa-check-circle"></i>
+                        </span>
+                        <input type="password" name="confirm_password" placeholder="Confirm Password" 
+                               required="required" class="login-input"/>
+                    </div>
+                    <button type="submit" class="login-btn">Sign Up</button>
+                    <t t-if="error">
+                        <div class="login-error" style="color: red; margin-top: 10px;">
+                            <t t-esc="error"/>
+                        </div>
+                    </t>
+                </form>
+                <div class="login-footer">
+                    <a href="/web/login">Already have an account? Log in</a>
                 </div>
             </div>
-        </t>
+        </div>
     </template>
 </odoo>

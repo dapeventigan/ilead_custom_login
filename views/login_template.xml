@@ -1,6 +1,6 @@
 <odoo>
     <template id="custom_login_template" name="Custom Login">
-        <t t-call="web.layout">
+        <t>
             <t t-set="title">Login</t>
             <t t-call-assets="web.assets_frontend" t-js="false"/>
             <t t-call-assets="web.assets_frontend" t-css="false"/>
@@ -13,6 +13,7 @@
                     </div>
                     <form action="/custom/ilead_login" method="post" class="login-form">
                         <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <input type="hidden" name="redirect" t-att-value="redirect"/>
                         <div class="input-group">
                             <span class="input-icon">
                                 <i class="fa fa-user"></i>
@@ -42,7 +43,7 @@
                         </t>
                     </form>
                     <div class="login-footer">
-                        <a href="/custom/signup">Don't have an account? Sign up</a>
+                        <a href="/web/signup">Don't have an account? Sign up</a>
                     </div>
                     <div class="login-footer">
                     Dape - iLead I.T Solutions</div>
