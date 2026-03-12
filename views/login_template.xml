@@ -21,13 +21,13 @@
                             <input type="text" name="login" placeholder="Enter username" 
                                    required="required" class="login-input"/>
                         </div>
-                        <div class="input-group">
+                        <!-- <div class="input-group">
                             <span class="input-icon">
                                 <i class="fa fa-envelope"></i>
                             </span>
                             <input type="email" name="email" placeholder="Enter email" 
                                    required="required" class="login-input"/>
-                        </div>
+                        </div> -->
                         <div class="input-group">
                             <span class="input-icon">
                                 <i class="fa fa-lock"></i>
@@ -40,6 +40,11 @@
                             <div class="login-error">
                                 <t t-esc="error"/>
                             </div>
+                            <t t-if="force_password_reset">
+                                <a t-attf-href="/password/renew?login=#{login}" class="btn btn-primary d-block mt-2">
+                                Renew Expired Password
+                                </a>
+                            </t>
                         </t>
                     </form>
                     <div class="login-footer">

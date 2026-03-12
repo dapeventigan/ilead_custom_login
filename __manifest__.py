@@ -8,6 +8,8 @@
     "data": [
             "views/login_template.xml", 
             "views/signup_template.xml", 
+            "views/reset_password_template.xml", 
+            "views/ilead_login.xml", 
              ],
     "assets": {
         "web.assets_frontend": [

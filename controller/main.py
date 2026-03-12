@@ -1,8 +1,9 @@
-from odoo import http
+from odoo import http,fields
 from odoo.http import request
 from odoo.addons.web.controllers.home import Home
 from odoo.addons.web.controllers.utils import ensure_db
 from odoo.addons.auth_signup.controllers.main import AuthSignupHome
+from datetime import timedelta
 
 class CustomLoginController(Home):
 
@@ -23,8 +24,14 @@ class CustomLoginController(Home):
         password = kwargs.get('password')
         email = kwargs.get('email')
 
-        try: 
+        user = request.env['res.users'].sudo().search([('login', '=', login)], limit=1)
+        if user:
+            if user.ilead_failed_login_count >= 5 and user.ilead_last_failed_date == fields.Date.today():
+                return request.render('custom_login.custom_login_template', {
+                    'error': 'Account locked. Too many failed attempts today. Please try again tomorrow.'
+                })
 
+        try: 
             credentials = {
                 'login': login,
                 'password': password,
@@ -34,12 +41,29 @@ class CustomLoginController(Home):
             uid = request.session.authenticate(request.env, credentials)
 
             if uid:
+                request.env['res.users'].sudo().search([('login', '=', login)], limit=1).reset_failed_attempts()
+                limit_date = fields.Date.today() - timedelta(days=90)
+                
+                if not user.ilead_password_last_updated or user.ilead_password_last_updated < limit_date:
+                    request.session.logout()
+                    return request.render('custom_login.custom_login_template', {
+                        'error': 'Your password has expired (90-day limit). Please use "Forgot Password" to reset it.',
+                        'force_password_reset': True,
+                        'login': login,
+                    })
+
                 return request.redirect('/web')
         except Exception:
-            pass
-        return request.render('custom_login.custom_login_template', {
-            'error': 'Wrong username or password'
-        })
+            if user:
+                user.register_failed_attempt()
+                attempts_left = 5 - user.ilead_failed_login_count
+                error_msg = f"Wrong username or password. {max(0, attempts_left)} attempts remaining today."
+            else:
+                error_msg = "Wrong username or password."
+
+            return request.render('custom_login.custom_login_template', {
+                'error': error_msg
+            })
 
 class CustomSignupController(AuthSignupHome):
 
@@ -70,3 +94,39 @@ class CustomSignupController(AuthSignupHome):
         values['group_ids'] = [(6, 0, [internal_group.id])]
         
         return values
+
+class CustomResetPassword(http.Controller):
+    @http.route('/password/renew', type='http', auth="public", methods=['GET', 'POST'], website=True)
+    def password_renewal(self, **kw):
+        values = {}
+        if request.httprequest.method == 'POST':
+            login = kw.get('login')
+            old_password = kw.get('old_password')
+            new_password = kw.get('new_password')
+            confirm_password = kw.get('confirm_password')
+
+            if new_password != confirm_password:
+                values['error'] = "New password do not match."
+            elif len(new_password) < 8:
+                values['error'] = "Password must be at least 8 characters."
+            else:
+                try:
+                    credentials = {
+                        'login': login,
+                        'password': old_password,
+                        'type': 'password'
+                    }
+
+                    uid = request.session.authenticate(request.env, credentials)
+                    if uid:
+                        user = request.env['res.users'].sudo().search([('login', '=', login)], limit=1)
+
+                        user.sudo().write({
+                            'password': new_password,
+                            'ilead_password_last_updated': fields.Date.today()
+                        })
+                        return request.redirect('/web/login?message=password_updated')
+                except Exception:
+                    values['error'] = "Invalid username or old password."
+        
+        return request.render('custom_login.password_renew_template', values)

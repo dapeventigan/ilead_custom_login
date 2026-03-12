@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="ilead_login_inherit_res_users" model="ir.ui.view">
+        <field name="name">ilead_login.view.form.inherit</field>
+        <field name="model">res.users</field>
+        <field name="inherit_id" ref="base.view_users_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='page_security']" position="after">
+                <page string="iLead Login">
+                    <group>
+                        <group string="Security Status">
+                            <field name="ilead_failed_login_count"/>
+                            <field name="ilead_last_failed_date"/>
+                        </group>
+                        <group string="Password Policy">
+                            <field name="ilead_password_last_updated"/>
+                        </group>
+                    </group>
+                    <group string="Administrative Actions">
+                        <button name="reset_failed_attempts" 
+                                type="object" 
+                                string="Unlock User Account" 
+                                class="btn-warning" 
+                                help="Resets failed login counter to zero."
+                                invisible="ilead_failed_login_count == 0"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
