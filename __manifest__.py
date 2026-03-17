@@ -10,10 +10,19 @@
             "views/signup_template.xml", 
             "views/reset_password_template.xml", 
             "views/ilead_login.xml", 
+            "views/ilead_users.xml", 
+            "views/ilead_main_menu.xml", 
              ],
     "assets": {
         "web.assets_frontend": [
             "custom_login/static/src/**/*.css",
+            "custom_login/static/src/**/*.js",
+            "custom_login/static/src/**/*.xml",
+        ],
+        "web.assets_backend": [
+            "custom_login/static/src/**/*.css",
+            "custom_login/static/src/**/*.js",
+            "custom_login/static/src/**/*.xml",
         ],
     },
     "installable": True,

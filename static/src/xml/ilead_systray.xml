@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates>
+    <t t-name="ilead_auto_logout.IleadSystray">
+        <div class="o_ilead_systray_item">
+            <div class="o_ilead_timer d-flex align-items-center px-2 py-1 text-white" 
+                 title="Idle Timeout Counter">
+                <i class="fa fa-hourglass-end me-2 opacity-100" />
+                <span class="o_idle_time_text fw-bold">
+                    <t t-esc="this.state.ilead_idle_time"/>
+                </span>
+            </div>
+        </div>
+    </t>
+</templates>

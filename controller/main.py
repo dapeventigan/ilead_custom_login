@@ -90,7 +90,7 @@ class CustomSignupController(AuthSignupHome):
             'email': qcontext.get('email'),
         })
         
-        internal_group = request.env.ref('base.group_user')
+        internal_group = request.env.ref('base.group_portal')
         values['group_ids'] = [(6, 0, [internal_group.id])]
         
         return values
@@ -130,3 +130,10 @@ class CustomResetPassword(http.Controller):
                     values['error'] = "Invalid username or old password."
         
         return request.render('custom_login.password_renew_template', values)
+
+class CustomLogoutController(http.Controller):
+
+    @http.route('/get_idle_time/timer', auth='public', type='jsonrpc')
+    def get_idle_time(self):
+        if request.env.user.ilead_enable_idle:
+            return request.env.user.ilead_idle_time

@@ -17,6 +17,8 @@
                         </group>
                     </group>
                     <group string="Administrative Actions">
+                        <field name="ilead_enable_idle" />
+                        <field name="ilead_idle_time" widget="float_time"  invisible="not ilead_enable_idle"/>
                         <button name="reset_failed_attempts" 
                                 type="object" 
                                 string="Unlock User Account" 

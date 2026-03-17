@@ -4,9 +4,15 @@ from datetime import date
 class ilead_login_attempt(models.Model):
     _inherit = 'res.users'
 
-    ilead_failed_login_count = fields.Integer(default=0)
-    ilead_last_failed_date = fields.Date()
+    ilead_failed_login_count = fields.Integer(string='Failed Login Count',default=0)
+    ilead_last_failed_date = fields.Date(string='Last Failed Date')
     ilead_password_last_updated = fields.Date(string="Password Last Updated", default=fields.Date.today())
+    ilead_enable_idle = fields.Boolean(string="Enable Idle Time")
+    ilead_idle_time = fields.Integer(string="Idle Time", default=10)
+    _ilead_positive_idle_time = models.Constraint(
+        'CHECK(ilead_idle_time >= 1)',
+        "Idle Time should not be zero.",
+    )
 
 
     def register_failed_attempt(self):
@@ -25,3 +31,10 @@ class ilead_login_attempt(models.Model):
             if 'password' in vals:
                 vals['ilead_password_last_updated'] = fields.Date.today()
             return super(ilead_login_attempt, self).write(vals)
+
+    def activate_user(self):
+        selected_ids = self.env.context.get('active_ids', [])
+        selected_records = self.env["res.users"].browse(selected_ids)
+
+        for users in selected_records:
+            users.group_ids = [(6, 0, [1])]

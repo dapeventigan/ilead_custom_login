@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem
+        id="ilead_user_main_menu"
+        name="Users"/>
+    <menuitem
+        id="ilead_user_menu"
+        name="Users"
+        action="ilead_users_action"
+        groups="base.group_system"
+        parent="ilead_user_main_menu"
+        sequence="0"/>
+</odoo>
