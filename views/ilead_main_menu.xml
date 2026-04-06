@@ -2,7 +2,8 @@
 <odoo>
     <menuitem
         id="ilead_user_main_menu"
-        name="Users"/>
+        name="Users"
+        groups="base.group_system"/>
     <menuitem
         id="ilead_user_menu"
         name="Users"
@@ -10,4 +11,11 @@
         groups="base.group_system"
         parent="ilead_user_main_menu"
         sequence="0"/>
+    <menuitem
+        id="ilead_pending_user_menu"
+        name="Pending Users"
+        action="ilead_pending_users_action"
+        groups="base.group_system"
+        parent="ilead_user_main_menu"
+        sequence="1"/>
 </odoo>

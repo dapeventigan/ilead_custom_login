@@ -1,9 +1,20 @@
-from odoo import http,fields
+import logging
+import werkzeug
+from werkzeug.urls import url_encode
+
+from odoo import http,fields,_
 from odoo.http import request
+from odoo.addons.web.models.res_users import SKIP_CAPTCHA_LOGIN
 from odoo.addons.web.controllers.home import Home
 from odoo.addons.web.controllers.utils import ensure_db
 from odoo.addons.auth_signup.controllers.main import AuthSignupHome
+from odoo.addons.auth_signup.models.res_users import SignupError
+from odoo.tools.translate import LazyTranslate
 from datetime import timedelta
+from odoo.exceptions import UserError
+
+_lt = LazyTranslate(__name__)
+_logger = logging.getLogger(__name__)
 
 class CustomLoginController(Home):
 
@@ -84,16 +95,31 @@ class CustomSignupController(AuthSignupHome):
         return request.render('custom_login.custom_signup_template', qcontext)
 
     def _prepare_signup_values(self, qcontext):
-        values = super()._prepare_signup_values(qcontext)
+        login = qcontext.get('login')
+        existing_user = request.env['res.users'].sudo().search([('login', '=', login)], limit=1)
 
-        values.update({
-            'email': qcontext.get('email'),
-        })
-        
-        internal_group = request.env.ref('base.group_portal')
-        values['group_ids'] = [(6, 0, [internal_group.id])]
-        
-        return values
+        if not existing_user:
+            values = super()._prepare_signup_values(qcontext)
+
+            values.update({
+                'email': qcontext.get('email'),
+            })
+            
+            internal_group = request.env.ref('base.group_portal')
+            values['group_ids'] = [(6, 0, [internal_group.id])]
+            
+            return values
+        else:
+            values = { key: qcontext.get(key) for key in ('login', 'name', 'password') }
+            if not values:
+                raise UserError(_("The form was not properly filled in."))
+            if values.get('password') != qcontext.get('confirm_password'):
+                raise UserError(_("Passwords do not match; please retype them."))
+            supported_lang_codes = [code for code, _ in request.env['res.lang'].get_installed()]
+            lang = request.env.context.get('lang', '')
+            if lang in supported_lang_codes:
+                values['lang'] = lang
+            return values
 
 class CustomResetPassword(http.Controller):
     @http.route('/password/renew', type='http', auth="public", methods=['GET', 'POST'], website=True)
@@ -130,6 +156,49 @@ class CustomResetPassword(http.Controller):
                     values['error'] = "Invalid username or old password."
         
         return request.render('custom_login.password_renew_template', values)
+
+
+class CustomForgotPassword(AuthSignupHome):
+
+    @http.route('/web/reset_password', type='http', auth='public', website=True, sitemap=False, captcha='password_reset', list_as_website_content=_lt("Reset Password"))
+    def web_auth_reset_password(self, *args, **kw):
+        qcontext = self.get_auth_signup_qcontext()
+
+        if not qcontext.get('token') and not qcontext.get('reset_password_enabled'):
+            raise werkzeug.exceptions.NotFound()
+
+        if 'error' not in qcontext and request.httprequest.method == 'POST':
+            try:
+                if qcontext.get('token'):
+                    self.do_signup(qcontext, do_login=False)
+                    request.update_context(skip_captcha_login=SKIP_CAPTCHA_LOGIN)
+                    qcontext['message'] = _("Your password has been reset successfully.")
+                else:
+                    login = qcontext.get('login')
+                    assert login, _("No login provided.")
+                    _logger.info(
+                        "Password reset attempt for <%s> by user <%s> from %s",
+                        login, request.env.user.login, request.httprequest.remote_addr)
+                    request.env['res.users'].sudo().reset_password(login)
+                    qcontext['message'] = _("Password reset instructions sent to your email address.")
+            except UserError as e:
+                qcontext['error'] = e.args[0]
+            except SignupError:
+                qcontext['error'] = _("Could not reset your password")
+                _logger.exception('error when resetting password')
+            except Exception as e:
+                qcontext['error'] = str(e)
+
+        elif 'signup_email' in qcontext:
+            user = request.env['res.users'].sudo().search([('email', '=', qcontext.get('signup_email')), ('state', '!=', 'new')], limit=1)
+            if user:
+                return request.redirect('/web/login?%s' % url_encode({'login': user.login, 'redirect': '/web'}))
+
+        # response = request.render('auth_signup.reset_password', qcontext)
+        response = request.render('custom_login.ilead_custom_reset_password', qcontext)
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        response.headers['Content-Security-Policy'] = "frame-ancestors 'self'"
+        return response
 
 class CustomLogoutController(http.Controller):
 

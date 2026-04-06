@@ -36,6 +36,9 @@
                                    required="required" class="login-input"/>
                         </div>
                         <button type="submit" class="login-btn">Login</button>
+                        <div class="text-end mt-2">
+                            <a href="/web/reset_password?redirect=%2Fodoo%2Fdiscuss%3F" class="small">Forgot Password</a>
+                        </div>
                         <t t-if="error">
                             <div class="login-error">
                                 <t t-esc="error"/>

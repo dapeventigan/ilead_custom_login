@@ -4,14 +4,16 @@
     "author": "dape",
     "license": "LGPL-3",
     "summary": "iLead I.T Solution Custom Odoo Login Page",
-    "depends": ["web", "auth_signup"],
+    "depends": ["web", "auth_signup", "mail"],
     "data": [
             "views/login_template.xml", 
             "views/signup_template.xml", 
-            "views/reset_password_template.xml", 
+            "views/reset_password_template.xml",
+            "views/forgot_password_template.xml",
             "views/ilead_login.xml", 
             "views/ilead_users.xml", 
-            "views/ilead_main_menu.xml", 
+            "views/ilead_main_menu.xml",
+            'views/ilead_mail_forgot_password_template.xml',
              ],
     "assets": {
         "web.assets_frontend": [
