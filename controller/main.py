@@ -1,5 +1,6 @@
 import logging
 import werkzeug
+import re
 from werkzeug.urls import url_encode
 
 from odoo import http,fields,_
@@ -36,11 +37,6 @@ class CustomLoginController(Home):
         email = kwargs.get('email')
 
         user = request.env['res.users'].sudo().search([('login', '=', login)], limit=1)
-        if user:
-            if user.ilead_failed_login_count >= 5 and user.ilead_last_failed_date == fields.Date.today():
-                return request.render('custom_login.custom_login_template', {
-                    'error': 'Account locked. Too many failed attempts today. Please try again tomorrow.'
-                })
 
         try: 
             credentials = {
@@ -56,12 +52,21 @@ class CustomLoginController(Home):
                 limit_date = fields.Date.today() - timedelta(days=90)
                 
                 if not user.ilead_password_last_updated or user.ilead_password_last_updated < limit_date:
+                    user.sudo().write({'ilead_status': 'c_locked'})
                     request.session.logout()
                     return request.render('custom_login.custom_login_template', {
                         'error': 'Your password has expired (90-day limit). Please use "Forgot Password" to reset it.',
                         'force_password_reset': True,
                         'login': login,
                     })
+                else:
+                    if user.ilead_status == "c_locked" or user.ilead_failed_login_count >= 5:
+                        if user.ilead_status != "c_locked":
+                            user.sudo().write({'ilead_status': 'c_locked'})
+
+                        return request.render('custom_login.custom_login_template', {
+                            'error': 'Account locked. Too many failed attempts. Please click Forgot Password.'
+                        })
 
                 return request.redirect('/web')
         except Exception:
@@ -86,6 +91,25 @@ class CustomSignupController(AuthSignupHome):
             return request.render('web.errors', {'message': _("Signup is disabled.")})
 
         if request.httprequest.method == 'POST':
+            password = qcontext.get('password')
+            errors = []
+            if len(password) < 8:
+                errors.append("at least 8 characters")
+
+            if not re.search(r"[A-Z]", password):
+                errors.append("one uppercase letter")
+
+            if not re.search(r"[a-z]", password):
+                errors.append("one lowercase letter")
+
+            if not re.search(r"[\d\W]", password):
+                errors.append("one number or special character")
+
+            if errors:
+                missing_str = ", ".join(errors[:-1]) + (" and " if len(errors) > 1 else "") + errors[-1]
+                error_msg = f"Password must include {missing_str}."
+                
+                return request.render('custom_login.custom_signup_template', {'error': error_msg,**qcontext})
             try:
                 self.do_signup(qcontext)
                 return request.redirect(qcontext.get('redirect') or '/web')
@@ -96,6 +120,7 @@ class CustomSignupController(AuthSignupHome):
 
     def _prepare_signup_values(self, qcontext):
         login = qcontext.get('login')
+
         existing_user = request.env['res.users'].sudo().search([('login', '=', login)], limit=1)
 
         if not existing_user:
@@ -124,7 +149,9 @@ class CustomSignupController(AuthSignupHome):
 class CustomResetPassword(http.Controller):
     @http.route('/password/renew', type='http', auth="public", methods=['GET', 'POST'], website=True)
     def password_renewal(self, **kw):
-        values = {}
+        values = {
+            'login': kw.get('login', '') 
+        }
         if request.httprequest.method == 'POST':
             login = kw.get('login')
             old_password = kw.get('old_password')
@@ -133,9 +160,24 @@ class CustomResetPassword(http.Controller):
 
             if new_password != confirm_password:
                 values['error'] = "New password do not match."
-            elif len(new_password) < 8:
-                values['error'] = "Password must be at least 8 characters."
             else:
+                errors = []
+                if len(new_password) < 8:
+                    errors.append("at least 8 characters")
+
+                if not re.search(r"[A-Z]", new_password):
+                    errors.append("one uppercase letter")
+
+                if not re.search(r"[a-z]", new_password):
+                    errors.append("one lowercase letter")
+
+                if not re.search(r"[\d\W]", new_password):
+                    errors.append("one number or special character")
+
+                if errors:
+                    missing_str = ", ".join(errors[:-1]) + (" and " if len(errors) > 1 else "") + errors[-1]
+                    values['error'] = f"Password must include {missing_str}."
+                    return request.render('custom_login.password_renew_template', values)
                 try:
                     credentials = {
                         'login': login,
@@ -148,6 +190,7 @@ class CustomResetPassword(http.Controller):
                         user = request.env['res.users'].sudo().search([('login', '=', login)], limit=1)
 
                         user.sudo().write({
+                            'ilead_status': 'b_activated',
                             'password': new_password,
                             'ilead_password_last_updated': fields.Date.today()
                         })
@@ -170,17 +213,35 @@ class CustomForgotPassword(AuthSignupHome):
         if 'error' not in qcontext and request.httprequest.method == 'POST':
             try:
                 if qcontext.get('token'):
-                    self.do_signup(qcontext, do_login=False)
-                    request.update_context(skip_captcha_login=SKIP_CAPTCHA_LOGIN)
-                    qcontext['message'] = _("Your password has been reset successfully.")
+                    retrieved_info = request.env['res.partner'].sudo()._signup_retrieve_info(qcontext.get('token'))
+                    if retrieved_info:
+                        user = request.env['res.users'].sudo().search([('login', '=', retrieved_info.get('login'))], limit=1)
+                        if user:
+                            user.sudo().reset_failed_attempts()
+                            self.do_signup(qcontext, do_login=False)
+                            request.update_context(skip_captcha_login=SKIP_CAPTCHA_LOGIN)
+                            qcontext['message'] = _("Your password has been reset successfully.")
+                        else:
+                            qcontext['message'] = _("Account doesn't exist. Please contact your administrator.")
                 else:
                     login = qcontext.get('login')
+                    email = qcontext.get('email')
                     assert login, _("No login provided.")
-                    _logger.info(
-                        "Password reset attempt for <%s> by user <%s> from %s",
-                        login, request.env.user.login, request.httprequest.remote_addr)
-                    request.env['res.users'].sudo().reset_password(login)
-                    qcontext['message'] = _("Password reset instructions sent to your email address.")
+                    assert email, _("No email provided.")
+
+                    user = request.env['res.users'].sudo().search([
+                        ('login', '=', login),
+                        ('email', '=', email),
+                        ('state', '!=', 'new')
+                    ], limit=1)
+
+                    if user:
+                        user.sudo().action_reset_password()
+                        
+                        qcontext['message'] = _("Password reset instructions sent to your email.")
+                    else:
+                        qcontext['error'] = _("Invalid Username or Email address.")
+
             except UserError as e:
                 qcontext['error'] = e.args[0]
             except SignupError:
@@ -194,7 +255,6 @@ class CustomForgotPassword(AuthSignupHome):
             if user:
                 return request.redirect('/web/login?%s' % url_encode({'login': user.login, 'redirect': '/web'}))
 
-        # response = request.render('auth_signup.reset_password', qcontext)
         response = request.render('custom_login.ilead_custom_reset_password', qcontext)
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         response.headers['Content-Security-Policy'] = "frame-ancestors 'self'"

@@ -6,14 +6,14 @@
         groups="base.group_system"/>
     <menuitem
         id="ilead_user_menu"
-        name="Users"
+        name="Active Users"
         action="ilead_users_action"
         groups="base.group_system"
         parent="ilead_user_main_menu"
         sequence="0"/>
     <menuitem
         id="ilead_pending_user_menu"
-        name="Pending Users"
+        name="Pending Requests"
         action="ilead_pending_users_action"
         groups="base.group_system"
         parent="ilead_user_main_menu"

@@ -5,13 +5,10 @@
         <field name="model">res.users</field>
         <field name="arch" type="xml">
             <list string="">
-                <header>
-                    <button name="activate_user" type="object" string="Activate User" class="btn-primary"/>
-                </header>
                 <field name="name" />
                 <field name="login" />
                 <field name="email" />
-                <field name="ilead_status" widget="badge" decoration-warning="ilead_status == 'a_new'" decoration-success="ilead_status == 'b_activated'"/>
+                <field name="ilead_status" widget="badge" decoration-warning="ilead_status == 'a_new'" decoration-success="ilead_status == 'b_activated'" decoration-danger="ilead_status == 'c_locked'"/>
             </list>
         </field>
     </record>
@@ -21,6 +18,15 @@
         <field name="arch" type="xml">
             <form string="">
                 <sheet>
+                    <header>
+                        <button name="reset_failed_attempts" 
+                                type="object" 
+                                string="Unlock User Account" 
+                                class="btn-warning" 
+                                help="Resets failed login counter to zero."
+                                invisible="ilead_status != 'c_locked'"/>
+                        <field name="ilead_status" widget="statusbar" />
+                    </header>
                     <div class="oe_title">
                         <h1>
                             <field name="name" />
@@ -30,6 +36,23 @@
                         <field name="login" />
                         <field name="email" />
                     </group>
+                    <notebook>
+                        <page string="iLead Login">
+                            <group>
+                                <group string="Security Status">
+                                    <field name="ilead_failed_login_count"/>
+                                    <field name="ilead_last_failed_date"/>
+                                </group>
+                                <group string="Password Policy">
+                                    <field name="ilead_password_last_updated"/>
+                                </group>
+                            </group>
+                            <group string="Administrative Actions">
+                                <field name="ilead_enable_idle" />
+                                <field name="ilead_idle_time" widget="float_time"  invisible="not ilead_enable_idle"/>
+                            </group>
+                        </page>
+                    </notebook>
                 </sheet>
                 <chatter/>
             </form>
@@ -39,9 +62,9 @@
         <field name="name">ilead_users.view.list</field>
         <field name="model">res.users</field>
         <field name="arch" type="xml">
-            <list string="" create="0" delete="0" edit="0">
+            <list string="" create="0" delete="0" edit="0" default_group_by="ilead_status" expand="1">
                 <header>
-                    <button name="activate_user" type="object" string="Activate User" class="btn-primary"/>
+                    <button name="activate_user" type="object" string="Activate User" class="btn-primary" display="always"/>
                 </header>
                 <field name="name" />
                 <field name="login" />
@@ -59,21 +82,21 @@
         (0, 0, {'view_mode': 'list', 'view_id': ref('ilead_users_view_list'), 'sequence': 1}),
         (0, 0, {'view_mode': 'form', 'view_id': ref('ilead_users_view_form'), 'sequence': 2})
         ]"/>
-        <field name="domain">[]</field>
+        <field name="domain">[('ilead_status', 'in', ['b_activated'])]</field>
         <field name="context">{}</field>
         <field name="help" type="html">
             <p>Add a User</p>
         </field>
     </record>
     <record id="ilead_pending_users_action" model="ir.actions.act_window">
-        <field name="name">Pending Users</field>
+        <field name="name">Pending Requests</field>
         <field name="res_model">res.users</field>
         <field name="view_mode">list</field>
         <field name="view_ids" eval="[
         (5, 0, 0),
         (0, 0, {'view_mode': 'list', 'view_id': ref('ilead_pending_view_list'), 'sequence': 1}),
         ]"/>
-        <field name="domain">[('ilead_status', '=', 'a_new')]</field>
+        <field name="domain">[('ilead_status', 'in', ['a_new','c_locked'])]</field>
         <field name="context">{}</field>
         <field name="help" type="html">
             <p>Activate a User here</p>

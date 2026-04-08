@@ -1,4 +1,5 @@
 from odoo import models, fields, api
+from odoo.exceptions import UserError
 from datetime import date
 
 class ilead_login_attempt(models.Model):
@@ -8,11 +9,13 @@ class ilead_login_attempt(models.Model):
     ilead_failed_login_count = fields.Integer(string='Failed Login Count',default=0)
     ilead_last_failed_date = fields.Date(string='Last Failed Date')
     ilead_password_last_updated = fields.Date(string="Password Last Updated", default=fields.Date.today())
-    ilead_enable_idle = fields.Boolean(string="Enable Idle Time")
-    ilead_idle_time = fields.Integer(string="Idle Time", default=10)
+    ilead_enable_idle = fields.Boolean(string="Enable Idle Time", default=True)
+    ilead_idle_time = fields.Integer(string="Idle Time", default=30)
     ilead_status = fields.Selection([
         ('a_new', 'New'),
         ('b_activated', 'Activated'),
+        ('c_locked', 'Locked'),
+
     ], string='Account Status', default="a_new")
 
     _ilead_positive_idle_time = models.Constraint(
@@ -30,14 +33,13 @@ class ilead_login_attempt(models.Model):
     def register_failed_attempt(self):
         today = date.today()
         for user in self:
-            if user.ilead_last_failed_date == today:
+            if user.ilead_failed_login_count != 0:
                 user.ilead_failed_login_count += 1
             else:
-                user.ilead_last_failed_date = today
                 user.ilead_failed_login_count = 1
 
     def reset_failed_attempts(self):
-        self.write({'ilead_failed_login_count': 0, 'ilead_last_failed_date': False})
+        self.write({'ilead_failed_login_count': 0, 'ilead_last_failed_date': False, 'ilead_status': 'b_activated'})
 
     def write(self, vals):
             if 'password' in vals:
@@ -48,18 +50,24 @@ class ilead_login_attempt(models.Model):
         selected_ids = self.env.context.get('active_ids', [])
         selected_records = self.env["res.users"].browse(selected_ids)
 
-        for users in selected_records:
-            users.group_ids = [(3, 10, 0)]
-            users.group_ids = [(4, 1, 0)]
-            users.ilead_status = 'b_activated'
+        if not selected_records:
+            raise UserError("Select a user to activate.")
 
-            activities = self.env['mail.activity'].search([
-                ('res_id', '=', users.id),
-                ('res_model', '=', 'res.users')
-            ])
-            
-            if activities:
-                activities.sudo().unlink()
+        for users in selected_records:
+            if users.ilead_status == 'a_new':
+                users.group_ids = [(3, 10, 0)]
+                users.group_ids = [(4, 1, 0)]
+                users.ilead_status = 'b_activated'
+
+                activities = self.env['mail.activity'].search([
+                    ('res_id', '=', users.id),
+                    ('res_model', '=', 'res.users')
+                ])
+                
+                if activities:
+                    activities.sudo().unlink()
+            if users.ilead_status == 'c_locked':
+                users.write({'ilead_failed_login_count': 0, 'ilead_last_failed_date': False, 'ilead_status': 'b_activated'})
 
     def notify_admin_users(self):
         todo_type = self.env.ref('mail.mail_activity_data_todo', raise_if_not_found=False)
